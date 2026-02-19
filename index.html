@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prime X - Persistent System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        :root { --accent: #00f2fe; --bg: #020617; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Consolas', monospace; }
+        
+        body {
+            background: var(--bg);
+            color: white;
+            min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            background-image: radial-gradient(circle, #0f172a 0%, #020617 100%);
+        }
+
+        .container {
+            width: 90%; max-width: 400px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 0 40px rgba(0, 242, 254, 0.25);
+            text-align: center;
+        }
+
+        .display-box {
+            background: #000;
+            border: 1px solid var(--accent);
+            padding: 25px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            min-height: 80px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #keyText { font-size: 1.2rem; color: #fff; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 10px var(--accent); }
+
+        .laser {
+            position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: var(--accent); box-shadow: 0 0 15px var(--accent);
+            display: none; z-index: 10;
+        }
+
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        button {
+            width: 100%; padding: 14px; margin: 8px 0; border-radius: 10px;
+            border: none; cursor: pointer; font-weight: bold; transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .gen-btn { background: var(--accent); color: #000; }
+        .gen-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
+        
+        .copy-btn { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid #334155; }
+        .copy-btn:hover { background: rgba(255,255,255,0.1); }
+
+        .timer-info { color: #f87171; font-size: 0.85rem; margin-bottom: 10px; font-weight: bold; }
+        
+        .history { margin-top: 25px; text-align: left; }
+        .log-item { 
+            display: flex; justify-content: space-between; font-size: 0.75rem;
+            padding: 8px; border-bottom: 1px solid #1e293b; background: rgba(255,255,255,0.02);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2 style="letter-spacing: 4px; color: var(--accent);">PRIME SYSTEM</h2>
+        
+        <div class="display-box" id="box">
+            <div class="laser" id="laser"></div>
+            <span id="keyText">INITIALIZING...</span>
+        </div>
+
+        <div id="timer" class="timer-info" style="display: none;"></div>
+
+        <button id="genBtn" class="gen-btn" onclick="startGeneration()">GENERATE SECURE KEY</button>
+        <button class="copy-btn" onclick="copyKey()"><i class="fas fa-copy"></i> COPY KEY</button>
+
+        <div class="history">
+            <p style="color:var(--accent); font-size: 0.7rem; margin-bottom: 8px; letter-spacing: 1px;">DATABASE LOGS:</p>
+            <div id="logs"></div>
+        </div>
+
+        <p style="margin-top: 20px; font-size: 0.6rem; color: #475569; letter-spacing: 1px;">
+            SECURED BY @vs18FF_MODS | ANTI-REFRESH ACTIVE
+        </p>
+    </div>
+
+    <script>
+        const COOLDOWN_TIME = 2 * 60 * 60 * 1000; // 2 Hours
+
+        window.onload = () => {
+            initSystem();
+        };
+
+        function initSystem() {
+            const lastKey = localStorage.getItem('current_prime_key');
+            const nextAllowed = localStorage.getItem('prime_expiry');
+            const now = new Date().getTime();
+
+            if (nextAllowed && now < nextAllowed) {
+                // Agar 2 ghante nahi hue, toh purani key dikhao
+                document.getElementById('keyText').innerText = lastKey;
+                startTimer(nextAllowed);
+            } else {
+                // Agar time khatam ho gaya ya pehli baar hai
+                document.getElementById('keyText').innerText = "SYSTEM READY";
+                document.getElementById('genBtn').disabled = false;
+            }
+            updateLogs();
+        }
+
+        function startGeneration() {
+            const btn = document.getElementById('genBtn');
+            const laser = document.getElementById('laser');
+            const text = document.getElementById('keyText');
+
+            btn.disabled = true;
+            text.innerText = "SCANNING...";
+            laser.style.display = "block";
+            laser.style.animation = "scan 1s linear infinite";
+
+            setTimeout(() => {
+                laser.style.display = "none";
+                const newKey = "PRIME-" + Math.random().toString(36).substring(2, 8).toUpperCase() + "-" + Math.floor(100 + Math.random() * 899);
+                const expiry = new Date().getTime() + COOLDOWN_TIME;
+
+                // Save to LocalStorage
+                localStorage.setItem('current_prime_key', newKey);
+                localStorage.setItem('prime_expiry', expiry);
+                
+                let history = JSON.parse(localStorage.getItem('prime_logs') || '[]');
+                history.unshift({ key: newKey, exp: expiry });
+                localStorage.setItem('prime_logs', JSON.stringify(history));
+
+                text.innerText = newKey;
+                startTimer(expiry);
+                updateLogs();
+            }, 2000);
+        }
+
+        function startTimer(expiry) {
+            const btn = document.getElementById('genBtn');
+            const timerDisplay = document.getElementById('timer');
+            
+            btn.disabled = true;
+            timerDisplay.style.display = "block";
+
+            const x = setInterval(() => {
+                const now = new Date().getTime();
+                const diff = expiry - now;
+
+                if (diff > 0) {
+                    let h = Math.floor(diff / 3600000);
+                    let m = Math.floor((diff % 3600000) / 60000);
+                    let s = Math.floor((diff % 60000) / 1000);
+                    timerDisplay.innerText = `LOCKED: ${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                } else {
+                    btn.disabled = false;
+                    timerDisplay.style.display = "none";
+                    document.getElementById('keyText').innerText = "SYSTEM READY";
+                    clearInterval(x);
+                }
+            }, 1000);
+        }
+
+        function updateLogs() {
+            const list = document.getElementById('logs');
+            const items = JSON.parse(localStorage.getItem('prime_logs') || '[]');
+            const now = new Date().getTime();
+
+            list.innerHTML = items.slice(0, 3).map(i => `
+                <div class="log-item">
+                    <span>${i.key}</span>
+                    <span style="color:${now > i.exp ? '#ef4444' : '#22c55e'}">${now > i.exp ? 'EXPIRED' : 'ACTIVE'}</span>
+                </div>
+            `).join('');
+        }
+
+        function copyKey() {
+            const k = document.getElementById('keyText').innerText;
+            if(k.includes('PRIME')) {
+                navigator.clipboard.writeText(k);
+                alert("Key Copied Successfully!");
+            }
+        }
+    </script>
+</body>
+</html>
